@@ -1,6 +1,8 @@
-from app.db import engine, Base
-from app import models
+from fastapi import FastAPI
 
-Base.metadata.create_all(bind=engine)
+app = FastAPI()
 
-print("Tables created successfully!")
+
+@app.get("/")
+def root():
+    return {"message": "Price Monitoring API is running"}
