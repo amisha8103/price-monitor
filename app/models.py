@@ -42,3 +42,13 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     api_key = Column(String, unique=True)
     usage_count = Column(Integer, default=0)
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer)
+    old_price = Column(Numeric)
+    new_price = Column(Numeric)
+    status = Column(String, default="pending")  # pending, sent, failed
+    created_at = Column(DateTime, default=func.now())

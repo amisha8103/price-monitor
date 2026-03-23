@@ -2,10 +2,17 @@ from fastapi import FastAPI, Depends
 from fastapi import Query
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
+from app.db import engine, Base
+from app import models
 from app.models import Product
 from app.models import PriceHistory
 from sqlalchemy import func
 from app.auth import authenticate
+
+# create tables
+Base.metadata.create_all(bind=engine)
+
+print("Tables created successfully!")
 
 app = FastAPI()
 
@@ -91,3 +98,5 @@ def get_analytics(user = Depends(authenticate), db: Session = Depends(get_db)):
             {"source": s, "count": c} for s, c in source_counts
         ]
     }
+
+print(models.Event)
