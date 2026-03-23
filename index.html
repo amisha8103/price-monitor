@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Price Monitor</title>
+</head>
+<body>
+
+<h1>📊 Dashboard</h1>
+<div id="dashboard"></div>
+
+<h1>🛍️ Products</h1>
+<input type="number" id="minPrice" placeholder="Min Price">
+<input type="number" id="maxPrice" placeholder="Max Price">
+<button onclick="loadProducts()">Filter</button>
+
+<ul id="productList"></ul>
+
+<h1>📈 Product Detail</h1>
+<div id="productDetail"></div>
+
+<script>
+const API_KEY = "beccc0d7-608b-44ce-b95a-f0629e9eebcc";
+const BASE_URL = "http://127.0.0.1:8000";
+
+async function loadDashboard() {
+    const res = await fetch(BASE_URL + "/analytics", {
+        headers: { "api-key": API_KEY }
+    });
+
+    const data = await res.json();
+
+    document.getElementById("dashboard").innerHTML =
+        "Total: " + data.total_products +
+        " | Avg Price: " + data.average_price;
+}
+
+async function loadProducts() {
+    let min = document.getElementById("minPrice").value;
+    let max = document.getElementById("maxPrice").value;
+
+    let url = BASE_URL + "/products?";
+
+    if (min) url += "min_price=" + min + "&";
+    if (max) url += "max_price=" + max;
+
+    const res = await fetch(url, {
+        headers: { "api-key": API_KEY }
+    });
+
+    const products = await res.json();
+
+    const list = document.getElementById("productList");
+    list.innerHTML = "";
+
+    products.forEach(p => {
+        const li = document.createElement("li");
+        li.innerHTML = `${p.name} - $${p.price} 
+            <button onclick="loadProduct(${p.id})">View</button>`;
+        list.appendChild(li);
+    });
+}
+
+async function loadProduct(id) {
+    try {
+        const res = await fetch(BASE_URL + "/products/" + id, {
+            headers: { "api-key": API_KEY }
+        });
+
+        const data = await res.json();
+
+        console.log("Product data:", data);  // 🔍 debug
+
+        let html = `<h3>${data.name}</h3>`;
+        html += `<p><b>Price:</b> $${data.price}</p>`;
+        html += `<p><b>Brand:</b> ${data.brand}</p>`;
+        html += `<p><b>Source:</b> ${data.source}</p>`;
+
+        html += "<h4>Price History:</h4><ul>";
+
+        data.history.forEach(h => {
+            html += `<li>$${h.price} — ${new Date(h.timestamp).toLocaleString()}</li>`;
+        });
+
+        html += "</ul>";
+
+        document.getElementById("productDetail").innerHTML = html;
+
+    } catch (err) {
+        console.error("Error loading product:", err);
+    }
+}
+
+loadDashboard();
+loadProducts();
+</script>
+
+</body>
+</html>

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Query
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
@@ -15,6 +16,14 @@ Base.metadata.create_all(bind=engine)
 print("Tables created successfully!")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
