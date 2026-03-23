@@ -5,6 +5,7 @@ from app.dependencies import get_db
 from app.models import Product
 from app.models import PriceHistory
 from sqlalchemy import func
+from app.auth import authenticate
 
 app = FastAPI()
 
@@ -17,6 +18,7 @@ def root():
 
 @app.get("/products")
 def get_products(
+    user = Depends(authenticate),
     db: Session = Depends(get_db),
     source: str = None,
     min_price: float = None,
@@ -47,7 +49,7 @@ def get_products(
     ]
 
 @app.get("/products/{product_id}")
-def get_product(product_id: int, db: Session = Depends(get_db)):
+def get_product(product_id: int,user = Depends(authenticate), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
@@ -73,7 +75,7 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     }
 
 @app.get("/analytics")
-def get_analytics(db: Session = Depends(get_db)):
+def get_analytics(user = Depends(authenticate), db: Session = Depends(get_db)):
     total_products = db.query(Product).count()
 
     avg_price = db.query(func.avg(Product.current_price)).scalar()
