@@ -9,12 +9,43 @@ def load_json(file_path):
 
 
 def insert_product(db, data, source):
+    external_id = data.get("product_id")
+
+    # check if product already exists
+    existing_product = db.query(Product).filter_by(
+        source=source,
+        external_id=external_id
+    ).first()
+
+    if existing_product:
+        # check if price changed
+        if float(existing_product.current_price) != float(data.get("price")):
+
+            # update price
+            old_price = existing_product.current_price
+            existing_product.current_price = data.get("price")
+
+            db.commit()
+
+            # add to history
+            history = PriceHistory(
+                product_id=existing_product.id,
+                price=data.get("price")
+            )
+            db.add(history)
+            db.commit()
+
+            print(f"Price updated for {external_id}: {old_price} → {data.get('price')}")
+
+        return
+
+    # if new product → insert
     product = Product(
         name=data.get("model"),
         brand=data.get("brand"),
-        category="Unknown",  # we improve later
+        category="Unknown",
         source=source,
-        external_id=data.get("product_id"),
+        external_id=external_id,
         product_url=data.get("product_url"),
         description=data.get("full_description"),
         image_url=data.get("main_images")[0]["url"] if data.get("main_images") else None,
