@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.dependencies import get_db
 from app.models import Product
 from app.models import PriceHistory
+from sqlalchemy import func
 
 app = FastAPI()
 
@@ -68,5 +69,23 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
                 "timestamp": h.timestamp
             }
             for h in history
+        ]
+    }
+
+@app.get("/analytics")
+def get_analytics(db: Session = Depends(get_db)):
+    total_products = db.query(Product).count()
+
+    avg_price = db.query(func.avg(Product.current_price)).scalar()
+
+    source_counts = db.query(
+        Product.source, func.count(Product.id)
+    ).group_by(Product.source).all()
+
+    return {
+        "total_products": total_products,
+        "average_price": float(avg_price) if avg_price else 0,
+        "products_by_source": [
+            {"source": s, "count": c} for s, c in source_counts
         ]
     }
