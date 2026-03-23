@@ -35,17 +35,27 @@ def insert_product(db, data, source):
     db.commit()
 
 
+import os
+
 def run_ingestion():
     db = SessionLocal()
 
-    data = load_json("data/products.json")
+    data_folder = "data"
 
-    # if single object
-    if isinstance(data, dict):
-        data = [data]
+    for file_name in os.listdir(data_folder):
+        if file_name.endswith(".json"):
+            file_path = os.path.join(data_folder, file_name)
 
-    for item in data:
-        insert_product(db, item, "1stdibs")
+            print(f"Processing {file_name}...")
+
+            data = load_json(file_path)
+
+            # handle single object or list
+            if isinstance(data, dict):
+                data = [data]
+
+            for item in data:
+                insert_product(db, item, "1stdibs")
 
     print("Ingestion complete!")
 
