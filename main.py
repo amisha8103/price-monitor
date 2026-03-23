@@ -3,6 +3,7 @@ from fastapi import Query
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
 from app.models import Product
+from app.models import PriceHistory
 
 app = FastAPI()
 
@@ -43,3 +44,29 @@ def get_products(
         }
         for p in products
     ]
+
+@app.get("/products/{product_id}")
+def get_product(product_id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+
+    if not product:
+        return {"error": "Product not found"}
+
+    history = db.query(PriceHistory).filter(
+        PriceHistory.product_id == product_id
+    ).all()
+
+    return {
+        "id": product.id,
+        "name": product.name,
+        "brand": product.brand,
+        "price": float(product.current_price),
+        "source": product.source,
+        "history": [
+            {
+                "price": float(h.price),
+                "timestamp": h.timestamp
+            }
+            for h in history
+        ]
+    }
