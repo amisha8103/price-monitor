@@ -1,19 +1,68 @@
+# def normalize_product(data, source):
+#     if source == "1stdibs":
+#         return {
+#             "name": data.get("model"),
+#             "brand": data.get("brand"),
+#             "category": "Accessories",  # improve later
+#             "external_id": data.get("product_id"),
+#             "product_url": data.get("product_url"),
+#             "description": data.get("full_description"),
+#             "image_url": data.get("main_images")[0]["url"] if data.get("main_images") else None,
+#             "price": data.get("price"),
+#             "currency": "USD"
+#         }
+
+#     # future sources:
+#     # elif source == "grailed":
+#     #     ...
+
+#     return None
+
+
 def normalize_product(data, source):
+
+    # common fields
+    price = data.get("price")
+    if price is None:
+        return None
+
+    # image handling
+    image_url = None
+    if data.get("main_images"):
+        image_url = data["main_images"][0].get("url")
+    elif data.get("image_url"):
+        image_url = data.get("image_url")
+
+    # description handling (diff per source)
+    description = None
+
     if source == "1stdibs":
-        return {
-            "name": data.get("model"),
-            "brand": data.get("brand"),
-            "category": "Accessories",  # improve later
-            "external_id": data.get("product_id"),
-            "product_url": data.get("product_url"),
-            "description": data.get("full_description"),
-            "image_url": data.get("main_images")[0]["url"] if data.get("main_images") else None,
-            "price": data.get("price"),
-            "currency": "USD"
-        }
+        description = data.get("full_description")
 
-    # future sources:
-    # elif source == "grailed":
-    #     ...
+    elif source == "fashionphile":
+        description = data.get("metadata", {}).get("description")
 
-    return None
+    elif source == "grailed":
+        description = data.get("metadata", {}).get("full_product_description")
+
+    # category (simple mapping)
+    if source == "1stdibs":
+        category = "Accessories"
+    elif source == "fashionphile":
+        category = "Jewelry"
+    elif source == "grailed":
+        category = "Apparel"
+    else:
+        category = "Unknown"
+
+    return {
+        "name": data.get("model"),
+        "brand": data.get("brand"),
+        "category": category,
+        "price": price,
+        "external_id": data.get("product_id"),
+        "product_url": data.get("product_url"),
+        "description": description,
+        "image_url": image_url,
+        "currency": data.get("currency", "USD")
+    }

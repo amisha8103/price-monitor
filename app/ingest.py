@@ -101,10 +101,20 @@ def run_ingestion():
                 data = [data]
 
             for item in data:
-                normalized = normalize_product(item, "1stdibs")
+                # detect source from filename
+                if "1stdibs" in file_name:
+                    source = "1stdibs"
+                elif "grailed" in file_name:
+                    source = "grailed"
+                elif "fashionphile" in file_name:
+                    source = "fashionphile"
+                else:
+                    source = "unknown"
+
+                normalized = normalize_product(item, source)
 
                 if normalized:
-                    insert_product(db, normalized, "1stdibs")
+                    insert_product(db, normalized, source)
 
     print("Ingestion complete!")
     db.close()
