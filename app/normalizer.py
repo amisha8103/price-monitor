@@ -45,15 +45,41 @@ def normalize_product(data, source):
     elif source == "grailed":
         description = data.get("metadata", {}).get("full_product_description")
 
-    # category (simple mapping)
-    if source == "1stdibs":
-        category = "Accessories"
-    elif source == "fashionphile":
-        category = "Jewelry"
-    elif source == "grailed":
-        category = "Apparel"
+    # # category (simple mapping)
+    # if source == "1stdibs":
+    #     category = "Accessories"
+    # elif source == "fashionphile":
+    #     category = "Jewelry"
+    # elif source == "grailed":
+    #     category = "Apparel"
+    # else:
+    #     category = "Unknown"
+
+    name = data.get("model", "").lower()
+
+    if "belt" in name:
+        category = "Belts"
+
+    elif "earring" in name:
+        category = "Earrings"
+
+    elif "necklace" in name or "pendant" in name:
+        category = "Necklace"
+
+    elif "ring" in name:
+        category = "Rings"
+
+    elif "jacket" in name:
+        category = "Jackets"
+
+    elif "shirt" in name or "tee" in name:
+        category = "Shirts"
+
+    elif "pants" in name or "jeans" in name:
+        category = "Pants"
+
     else:
-        category = "Unknown"
+        category = "Other"
 
     return {
         "name": data.get("model"),
