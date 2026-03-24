@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Price Monitor</title>
 </head>
 <body>
@@ -13,7 +14,7 @@
 <input type="number" id="maxPrice" placeholder="Max Price">
 <input type="text" id="source" placeholder="Source (e.g. 1stdibs)">
 <input type="text" id="category" placeholder="Category">
-<button onclick="loadProducts()">Filter</button>
+<button onclick="loadProducts(); loadDashboard()">Filter</button>
 
 <ul id="productList"></ul>
 
@@ -25,34 +26,70 @@ const API_KEY = "beccc0d7-608b-44ce-b95a-f0629e9eebcc";
 const BASE_URL = "http://127.0.0.1:8000";
 
 async function loadDashboard() {
-    const res = await fetch(BASE_URL + "/analytics", {
+    let source = document.getElementById("source").value.trim();
+    let category = document.getElementById("category").value.trim();
+
+    let params = [];
+
+    if (source) params.push("source=" + source);
+    if (category) params.push("category=" + category);
+
+    let url = BASE_URL + "/analytics";
+    if (params.length > 0) url += "?" + params.join("&");
+
+    console.log("Dashboard URL:", url);
+
+    const res = await fetch(url, {
         headers: { "api-key": API_KEY }
     });
 
     const data = await res.json();
+    console.log("Dashboard data:", data); // 🔍 IMPORTANT
 
-    document.getElementById("dashboard").innerHTML =
-        "Total: " + data.total_products +
-        " | Avg Price: " + data.average_price;
+    let html = "";
+
+    // 🟢 GLOBAL
+    html += "Total: " + (data.total_products ?? 0) +
+            " | Avg Price: " + (data.average_price ?? 0).toFixed(2) +
+            "<br><br>";
+
+    // 🟡 SAFE SOURCE LOOP
+    html += "<b>By Source:</b><br>";
+
+    if (data.source_summary && Array.isArray(data.source_summary)) {
+        data.source_summary.forEach(s => {
+            const avg = (s.avg_price ?? 0).toFixed(2);
+            html += `${s.source}: count → ${s.count}, avg price → $${avg}<br>`;
+        });
+    } else {
+        html += "No source data<br>";
+    }
+
+    // 🔵 SAFE CATEGORY LOOP
+    if (source || category) {
+        html += "<br><b>Avg by Category:</b><br>";
+
+        if (data.average_price_by_category && Array.isArray(data.average_price_by_category)) {
+            data.average_price_by_category.forEach(c => {
+                const avg = (c.avg_price ?? 0).toFixed(2);
+                html += `${c.category}: count → ${c.count ?? 0}, avg price → $${avg}<br>`;
+            });
+        } else {
+            html += "No category data<br>";
+        }
+    }
+
+    document.getElementById("dashboard").innerHTML = html;
 }
-
 async function loadProducts() {
     let min = document.getElementById("minPrice").value;
     let max = document.getElementById("maxPrice").value;
     let category = document.getElementById("category").value.trim();
+    let source = document.getElementById("source").value;
 
     if (category) {
         category = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
     }
-    let source = document.getElementById("source").value;
-
-
-    // let url = BASE_URL + "/products?";
-
-    // if (min) url += "min_price=" + min + "&";
-    // if (max) url += "max_price=" + max;
-    // if (category) url += "category=" + category + "&";
-    // if (source) url += "source=" + source + "&";
 
     let params = [];
 
@@ -81,33 +118,26 @@ async function loadProducts() {
 }
 
 async function loadProduct(id) {
-    try {
-        const res = await fetch(BASE_URL + "/products/" + id, {
-            headers: { "api-key": API_KEY }
-        });
+    const res = await fetch(BASE_URL + "/products/" + id, {
+        headers: { "api-key": API_KEY }
+    });
 
-        const data = await res.json();
+    const data = await res.json();
 
-        console.log("Product data:", data);  // 🔍 debug
+    let html = `<h3>${data.name}</h3>`;
+    html += `<p><b>Price:</b> $${data.price}</p>`;
+    html += `<p><b>Brand:</b> ${data.brand}</p>`;
+    html += `<p><b>Source:</b> ${data.source}</p>`;
 
-        let html = `<h3>${data.name}</h3>`;
-        html += `<p><b>Price:</b> $${data.price}</p>`;
-        html += `<p><b>Brand:</b> ${data.brand}</p>`;
-        html += `<p><b>Source:</b> ${data.source}</p>`;
+    html += "<h4>Price History:</h4><ul>";
 
-        html += "<h4>Price History:</h4><ul>";
+    data.history.forEach(h => {
+        html += `<li>$${h.price} — ${new Date(h.timestamp).toLocaleString()}</li>`;
+    });
 
-        data.history.forEach(h => {
-            html += `<li>$${h.price} — ${new Date(h.timestamp).toLocaleString()}</li>`;
-        });
+    html += "</ul>";
 
-        html += "</ul>";
-
-        document.getElementById("productDetail").innerHTML = html;
-
-    } catch (err) {
-        console.error("Error loading product:", err);
-    }
+    document.getElementById("productDetail").innerHTML = html;
 }
 
 loadDashboard();

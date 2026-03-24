@@ -96,23 +96,165 @@ def get_product(product_id: int,user = Depends(authenticate), db: Session = Depe
         ]
     }
 
+# @app.get("/analytics")
+# def get_analytics(user = Depends(authenticate), db: Session = Depends(get_db)):
+#     total_products = db.query(Product).count()
+
+#     avg_price = db.query(func.avg(Product.current_price)).scalar()
+
+#     source_counts = db.query(
+#         Product.source, func.count(Product.id)
+#     ).group_by(Product.source).all()
+
+#     return {
+#         "total_products": total_products,
+#         "average_price": float(avg_price) if avg_price else 0,
+#         "products_by_source": [
+#             {"source": s, "count": c} for s, c in source_counts
+#         ]
+#     }
+
+# @app.get("/analytics")
+# def get_analytics(
+#     user = Depends(authenticate),
+#     db: Session = Depends(get_db),
+#     source: str = None,
+#     category: str = None
+# ):
+
+#     query = db.query(Product)
+
+#     # apply filters
+#     if source:
+#         query = query.filter(Product.source == source)
+
+#     if category:
+#         from sqlalchemy import func
+#         query = query.filter(func.lower(Product.category) == category.lower())
+
+#     # total products
+#     total_products = query.count()
+
+#     # average price
+#     avg_price = query.with_entities(func.avg(Product.current_price)).scalar()
+
+#     # products by source (respecting filters)
+#     source_counts = db.query(
+#         Product.source, func.count(Product.id)
+#     )
+
+#     if source:
+#         source_counts = source_counts.filter(Product.source == source)
+
+#     if category:
+#         source_counts = source_counts.filter(
+#             func.lower(Product.category) == category.lower()
+#         )
+
+#     source_counts = source_counts.group_by(Product.source).all()
+
+#     # average by category (respecting filters)
+#     category_avg = db.query(
+#         Product.category, func.avg(Product.current_price)
+#     )
+
+#     if source:
+#         category_avg = category_avg.filter(Product.source == source)
+
+#     if category:
+#         category_avg = category_avg.filter(
+#             func.lower(Product.category) == category.lower()
+#         )
+
+#     category_avg = category_avg.group_by(Product.category).all()
+
+#     return {
+#         "total_products": total_products,
+#         "average_price": float(avg_price) if avg_price else 0,
+
+#         "products_by_source": [
+#             {"source": s, "count": c} for s, c in source_counts
+#         ],
+
+#         "average_price_by_category": [
+#             {"category": cat, "avg_price": float(avg)}
+#             for cat, avg in category_avg
+#         ]
+#     }
+
 @app.get("/analytics")
-def get_analytics(user = Depends(authenticate), db: Session = Depends(get_db)):
+def get_analytics(
+    user = Depends(authenticate),
+    db: Session = Depends(get_db),
+    source: str = None,
+    category: str = None
+):
+
+    # 🔥 GLOBAL (NO FILTERS)
     total_products = db.query(Product).count()
-
     avg_price = db.query(func.avg(Product.current_price)).scalar()
+    
 
-    source_counts = db.query(
+    # 🟢 GLOBAL SOURCE SUMMARY
+    global_source_counts = db.query(
+        Product.source, func.count(Product.id), func.avg(Product.current_price)
+    ).group_by(Product.source).all()
+    
+    # 🔵 FILTERED QUERY
+    query = db.query(Product)
+
+    if source:
+        query = query.filter(Product.source == source)
+
+    if category:
+        query = query.filter(func.lower(Product.category) == category.lower())
+
+    # products by source (filtered)
+    source_counts = query.with_entities(
         Product.source, func.count(Product.id)
     ).group_by(Product.source).all()
+
+    # avg by category (filtered)
+    category_avg = query.with_entities(
+        Product.category,
+        func.avg(Product.current_price),
+        func.count(Product.id)
+    ).group_by(Product.category).all()
+
+    filtered_total = query.count()
+    filtered_avg = query.with_entities(func.avg(Product.current_price)).scalar()
 
     return {
         "total_products": total_products,
         "average_price": float(avg_price) if avg_price else 0,
+
         "products_by_source": [
-            {"source": s, "count": c} for s, c in source_counts
-        ]
+            {"source": s, "count": c} for s, c, _ in global_source_counts
+        ],
+
+        "source_summary": [
+            {
+                "source": s,
+                "count": c,
+                "avg_price": float(avg)
+            }
+            for s, c, avg in global_source_counts
+        ], 
+
+        "average_price_by_category": [
+            {
+                "category": cat,
+                "avg_price": float(avg),
+                "count": count
+            }
+            for cat, avg, count in category_avg
+        ],
+
+        "filtered_total": filtered_total,
+        "filtered_avg": float(filtered_avg) if filtered_avg else 0,
     }
+
+
 
 @app.post("/refresh")
 def refresh_data(user = Depends(authenticate)):
