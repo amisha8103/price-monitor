@@ -39,16 +39,29 @@ async function loadDashboard() {
 async function loadProducts() {
     let min = document.getElementById("minPrice").value;
     let max = document.getElementById("maxPrice").value;
-    let category = document.getElementById("category").value;
+    let category = document.getElementById("category").value.trim();
+
+    if (category) {
+        category = category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+    }
     let source = document.getElementById("source").value;
 
 
-    let url = BASE_URL + "/products?";
+    // let url = BASE_URL + "/products?";
 
-    if (min) url += "min_price=" + min + "&";
-    if (max) url += "max_price=" + max;
-    if (category) url += "category=" + category + "&";
-    if (source) url += "source=" + source + "&";
+    // if (min) url += "min_price=" + min + "&";
+    // if (max) url += "max_price=" + max;
+    // if (category) url += "category=" + category + "&";
+    // if (source) url += "source=" + source + "&";
+
+    let params = [];
+
+    if (min) params.push("min_price=" + min);
+    if (max) params.push("max_price=" + max);
+    if (category) params.push("category=" + category);
+    if (source) params.push("source=" + source);
+
+    let url = BASE_URL + "/products?" + params.join("&");
 
     const res = await fetch(url, {
         headers: { "api-key": API_KEY }

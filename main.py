@@ -49,7 +49,7 @@ def get_products(
         query = query.filter(Product.source == source)
     
     if category:
-        query = query.filter(Product.category == category)
+        query = query.filter(func.lower(Product.category) == category.lower())
 
     if min_price:
         query = query.filter(Product.current_price >= min_price)
