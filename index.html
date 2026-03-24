@@ -11,6 +11,8 @@
 <h1>🛍️ Products</h1>
 <input type="number" id="minPrice" placeholder="Min Price">
 <input type="number" id="maxPrice" placeholder="Max Price">
+<input type="text" id="source" placeholder="Source (e.g. 1stdibs)">
+<input type="text" id="category" placeholder="Category">
 <button onclick="loadProducts()">Filter</button>
 
 <ul id="productList"></ul>
@@ -37,11 +39,16 @@ async function loadDashboard() {
 async function loadProducts() {
     let min = document.getElementById("minPrice").value;
     let max = document.getElementById("maxPrice").value;
+    let category = document.getElementById("category").value;
+    let source = document.getElementById("source").value;
+
 
     let url = BASE_URL + "/products?";
 
     if (min) url += "min_price=" + min + "&";
     if (max) url += "max_price=" + max;
+    if (category) url += "category=" + category + "&";
+    if (source) url += "source=" + source + "&";
 
     const res = await fetch(url, {
         headers: { "api-key": API_KEY }

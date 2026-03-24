@@ -37,6 +37,7 @@ def get_products(
     user = Depends(authenticate),
     db: Session = Depends(get_db),
     source: str = None,
+    category: str = None,
     min_price: float = None,
     max_price: float = None
 ):
@@ -44,6 +45,9 @@ def get_products(
 
     if source:
         query = query.filter(Product.source == source)
+    
+    if category:
+        query = query.filter(Product.category == category)
 
     if min_price:
         query = query.filter(Product.current_price >= min_price)
