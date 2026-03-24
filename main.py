@@ -9,6 +9,8 @@ from app.models import Product
 from app.models import PriceHistory
 from sqlalchemy import func
 from app.auth import authenticate
+import subprocess
+import sys
 
 # create tables
 Base.metadata.create_all(bind=engine)
@@ -111,5 +113,13 @@ def get_analytics(user = Depends(authenticate), db: Session = Depends(get_db)):
             {"source": s, "count": c} for s, c in source_counts
         ]
     }
+
+@app.post("/refresh")
+def refresh_data(user = Depends(authenticate)):
+    try:
+        subprocess.Popen([sys.executable, "-m", "app.ingest"])
+        return {"message": "Data refresh started"}
+    except Exception as e:
+        return {"error": str(e)}
 
 print(models.Event)
