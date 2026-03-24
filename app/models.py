@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.sql import func
 from app.db import Base
+from datetime import datetime
 
 
 class Product(Base):
@@ -52,3 +53,11 @@ class Event(Base):
     new_price = Column(Numeric)
     status = Column(String, default="pending")  # pending, sent, failed
     created_at = Column(DateTime, default=func.now())
+
+class APIUsage(Base):
+    __tablename__ = "api_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    api_key = Column(String)
+    endpoint = Column(String)
+    timestamp = Column(DateTime, default=datetime.utcnow)    

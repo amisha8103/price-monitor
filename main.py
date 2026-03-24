@@ -11,6 +11,17 @@ from sqlalchemy import func
 from app.auth import authenticate
 import subprocess
 import sys
+from app.models import APIUsage
+
+def log_usage(db, api_key, endpoint):
+
+    print(f"Logging usage: {api_key} called {endpoint}")
+    usage = APIUsage(
+        api_key=api_key,
+        endpoint=endpoint
+    )
+    db.add(usage)
+    db.commit()
 
 # create tables
 Base.metadata.create_all(bind=engine)
@@ -43,6 +54,7 @@ def get_products(
     min_price: float = None,
     max_price: float = None
 ):
+    log_usage(db, user.api_key, "/products") 
     query = db.query(Product)
 
     if source:
@@ -72,6 +84,7 @@ def get_products(
 
 @app.get("/products/{product_id}")
 def get_product(product_id: int,user = Depends(authenticate), db: Session = Depends(get_db)):
+    log_usage(db, user.api_key, f"/products/{product_id}")
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
@@ -189,7 +202,7 @@ def get_analytics(
     source: str = None,
     category: str = None
 ):
-
+    log_usage(db, user.api_key, "/analytics")
     # 🔥 GLOBAL (NO FILTERS)
     total_products = db.query(Product).count()
     avg_price = db.query(func.avg(Product.current_price)).scalar()
@@ -257,7 +270,8 @@ def get_analytics(
 
 
 @app.post("/refresh")
-def refresh_data(user = Depends(authenticate)):
+def refresh_data(user = Depends(authenticate), db: Session = Depends(get_db)):
+    log_usage(db, user.api_key, "/refresh")
     try:
         subprocess.Popen([sys.executable, "-m", "app.ingest"])
         return {"message": "Data refresh started"}
