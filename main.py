@@ -12,6 +12,7 @@ from app.auth import authenticate
 import subprocess
 import sys
 from app.models import APIUsage
+from fastapi import HTTPException
 
 def log_usage(db, api_key, endpoint):
 
@@ -55,6 +56,17 @@ def get_products(
     max_price: float = None
 ):
     log_usage(db, user.api_key, "/products") 
+
+    # ❌ BAD INPUT CHECK
+    if min_price is not None and min_price < 0:
+        raise HTTPException(status_code=400, detail="min_price must be >= 0")
+
+    if max_price is not None and max_price < 0:
+        raise HTTPException(status_code=400, detail="max_price must be >= 0")
+
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(status_code=400, detail="min_price cannot be greater than max_price")
+    
     query = db.query(Product)
 
     if source:
@@ -63,10 +75,10 @@ def get_products(
     if category:
         query = query.filter(func.lower(Product.category) == category.lower())
 
-    if min_price:
+    if min_price is not None:
         query = query.filter(Product.current_price >= min_price)
 
-    if max_price:
+    if max_price is not None:
         query = query.filter(Product.current_price <= max_price)
 
     products = query.all()
@@ -88,7 +100,7 @@ def get_product(product_id: int,user = Depends(authenticate), db: Session = Depe
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
-        return {"error": "Product not found"}
+        raise HTTPException(status_code=404, detail="Product not found")    
 
     history = db.query(PriceHistory).filter(
         PriceHistory.product_id == product_id
@@ -203,9 +215,17 @@ def get_analytics(
     category: str = None
 ):
     log_usage(db, user.api_key, "/analytics")
+
     # 🔥 GLOBAL (NO FILTERS)
     total_products = db.query(Product).count()
     avg_price = db.query(func.avg(Product.current_price)).scalar()
+
+    if source and source.strip() == "":
+        raise HTTPException(status_code=400, detail="Source cannot be empty")
+    if category and category.strip() == "":
+        raise HTTPException(status_code=400, detail="Category cannot be empty")
+    if total_products == 0:
+        raise HTTPException(status_code=400, detail="No products in database")
     
 
     # 🟢 GLOBAL SOURCE SUMMARY
