@@ -44,16 +44,16 @@ async function loadDashboard() {
     });
 
     const data = await res.json();
-    console.log("Dashboard data:", data); // 🔍 IMPORTANT
+    console.log("Dashboard data:", data); //  IMPORTANT
 
     let html = "";
 
-    // 🟢 GLOBAL
+    //  GLOBAL
     html += "Total: " + (data.total_products ?? 0) +
             " | Avg Price: " + (data.average_price ?? 0).toFixed(2) +
             "<br><br>";
 
-    // 🟡 SAFE SOURCE LOOP
+    //  SAFE SOURCE LOOP
     html += "<b>By Source:</b><br>";
 
     if (data.source_summary && Array.isArray(data.source_summary)) {
@@ -65,7 +65,7 @@ async function loadDashboard() {
         html += "No source data<br>";
     }
 
-    // 🔵 SAFE CATEGORY LOOP
+    //  SAFE CATEGORY LOOP
     if (source || category) {
         html += "<br><b>Avg by Category:</b><br>";
 

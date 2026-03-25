@@ -5,7 +5,7 @@ from app.models import Event
 def process_events():
     db = SessionLocal()
 
-    events = db.query(Event).filter(Event.status == "pending").all()
+    events = db.query(Event).filter(Event.status.in_(["pending", "failed"])).all()
 
     for event in events:
         try:
@@ -17,8 +17,9 @@ def process_events():
 
             db.commit()
 
-        except Exception:
+        except Exception as e:
             event.status = "failed"
+            event.error = str(e)
             db.commit()
 
     db.close()

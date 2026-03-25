@@ -57,7 +57,7 @@ def get_products(
 ):
     log_usage(db, user.api_key, "/products") 
 
-    # ❌ BAD INPUT CHECK
+    #  BAD INPUT CHECK
     if min_price is not None and min_price < 0:
         raise HTTPException(status_code=400, detail="min_price must be >= 0")
 
@@ -121,91 +121,6 @@ def get_product(product_id: int,user = Depends(authenticate), db: Session = Depe
         ]
     }
 
-# @app.get("/analytics")
-# def get_analytics(user = Depends(authenticate), db: Session = Depends(get_db)):
-#     total_products = db.query(Product).count()
-
-#     avg_price = db.query(func.avg(Product.current_price)).scalar()
-
-#     source_counts = db.query(
-#         Product.source, func.count(Product.id)
-#     ).group_by(Product.source).all()
-
-#     return {
-#         "total_products": total_products,
-#         "average_price": float(avg_price) if avg_price else 0,
-#         "products_by_source": [
-#             {"source": s, "count": c} for s, c in source_counts
-#         ]
-#     }
-
-# @app.get("/analytics")
-# def get_analytics(
-#     user = Depends(authenticate),
-#     db: Session = Depends(get_db),
-#     source: str = None,
-#     category: str = None
-# ):
-
-#     query = db.query(Product)
-
-#     # apply filters
-#     if source:
-#         query = query.filter(Product.source == source)
-
-#     if category:
-#         from sqlalchemy import func
-#         query = query.filter(func.lower(Product.category) == category.lower())
-
-#     # total products
-#     total_products = query.count()
-
-#     # average price
-#     avg_price = query.with_entities(func.avg(Product.current_price)).scalar()
-
-#     # products by source (respecting filters)
-#     source_counts = db.query(
-#         Product.source, func.count(Product.id)
-#     )
-
-#     if source:
-#         source_counts = source_counts.filter(Product.source == source)
-
-#     if category:
-#         source_counts = source_counts.filter(
-#             func.lower(Product.category) == category.lower()
-#         )
-
-#     source_counts = source_counts.group_by(Product.source).all()
-
-#     # average by category (respecting filters)
-#     category_avg = db.query(
-#         Product.category, func.avg(Product.current_price)
-#     )
-
-#     if source:
-#         category_avg = category_avg.filter(Product.source == source)
-
-#     if category:
-#         category_avg = category_avg.filter(
-#             func.lower(Product.category) == category.lower()
-#         )
-
-#     category_avg = category_avg.group_by(Product.category).all()
-
-#     return {
-#         "total_products": total_products,
-#         "average_price": float(avg_price) if avg_price else 0,
-
-#         "products_by_source": [
-#             {"source": s, "count": c} for s, c in source_counts
-#         ],
-
-#         "average_price_by_category": [
-#             {"category": cat, "avg_price": float(avg)}
-#             for cat, avg in category_avg
-#         ]
-#     }
 
 @app.get("/analytics")
 def get_analytics(
@@ -216,9 +131,11 @@ def get_analytics(
 ):
     log_usage(db, user.api_key, "/analytics")
 
-    # 🔥 GLOBAL (NO FILTERS)
-    total_products = db.query(Product).count()
-    avg_price = db.query(func.avg(Product.current_price)).scalar()
+    # GLOBAL (NO FILTERS)
+    excluded_sources = ["testsource"]
+    base_query = db.query(Product).filter(~Product.source.in_(excluded_sources))
+    total_products = base_query.count()
+    avg_price = base_query.with_entities(func.avg(Product.current_price)).scalar()
 
     if source and source.strip() == "":
         raise HTTPException(status_code=400, detail="Source cannot be empty")
@@ -228,13 +145,13 @@ def get_analytics(
         raise HTTPException(status_code=400, detail="No products in database")
     
 
-    # 🟢 GLOBAL SOURCE SUMMARY
-    global_source_counts = db.query(
+    # GLOBAL SOURCE SUMMARY
+    global_source_counts = base_query.with_entities(
         Product.source, func.count(Product.id), func.avg(Product.current_price)
     ).group_by(Product.source).all()
     
-    # 🔵 FILTERED QUERY
-    query = db.query(Product)
+    # FILTERED QUERY
+    query = base_query
 
     if source:
         query = query.filter(Product.source == source)

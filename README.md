@@ -1,20 +1,21 @@
-# Product Price Monitoring System
+#  Product Price Monitoring System
 
 ##  Overview
 
-This project is a **Product Price Monitoring System** that collects product data from multiple marketplaces, tracks price changes over time, and provides APIs and a web interface for monitoring and analysis.
+This project is a **Product Price Monitoring System** that ingests product data from multiple marketplaces, tracks price changes over time, and provides APIs and a web interface for monitoring.
 
-It supports:
+It demonstrates:
 
-* Multi-source product ingestion (1stdibs, extensible to others)
+* Data ingestion & normalization
 * Price history tracking
-* Event-driven notifications for price changes
-* Authenticated API access
-* Interactive frontend dashboard
+* Event-driven notifications
+* Authenticated API access with usage tracking
+* Aggregate analytics
+* Functional frontend dashboard
 
 ---
 
-##  Setup Instructions
+#  How to Run (Step-by-Step)
 
 ### 1. Clone the repository
 
@@ -23,12 +24,16 @@ git clone <your-repo-url>
 cd price-monitor
 ```
 
-### 2. Create virtual environment
+---
+
+### 2. Create and activate virtual environment
 
 ```bash
 python -m venv venv
 venv\Scripts\activate   # Windows
 ```
+
+---
 
 ### 3. Install dependencies
 
@@ -36,19 +41,26 @@ venv\Scripts\activate   # Windows
 pip install -r requirements.txt
 ```
 
+---
+
 ### 4. Setup PostgreSQL
 
-* Create a database named `price_monitor`
-* Update DB credentials in `app/db.py`
+* Create database: `price_monitor`
+* Update credentials in `app/db.py`
 
-### 5. Run the application
+---
+
+### 5. Start the API server (creates tables)
 
 ```bash
-python main.py
 uvicorn main:app --reload
 ```
 
-### 6. Generate API key
+Keep this running, or start it once to create tables and then stop it.
+
+---
+
+### 6. Create API key (in a new terminal)
 
 ```bash
 python create_user.py
@@ -56,187 +68,349 @@ python create_user.py
 
 ---
 
-##  Running End-to-End
+### 7. Run ingestion
 
-1. Run ingestion to load data:
-
+```bash
 python -m app.ingest
+```
 
-2. Start API server:
+---
 
-uvicorn main:app --reload
+### 8. Run frontend
 
-3. Open frontend:
+```bash
+python -m http.server 5500
+```
 
-Open `index.html` in browser
+Open:
 
-4. (Optional) Process notifications:
+```
+http://localhost:5500/index.html
+```
 
+Note: the dashboard needs the API server running.
+
+---
+
+### 9. Run worker (notifications)
+
+```bash
+python app/worker.py
+```
+
+If you are not in the repo root, use:
+
+```bash
 python -m app.worker
-
-
-##  API Documentation
-
-All endpoints require an API key:
-
-```
-api-key: YOUR_API_KEY
 ```
 
-### Endpoints
-
-* `GET /products`
-
-  * List products
-  * Supports filters:
-
-    * `source`
-    * `min_price`
-    * `max_price`
-
-* `GET /products/{id}`
-
-  * Get product details with price history
-
-* `GET /analytics`
-
-  * Returns:
-
-    * total products
-    * average price
-    * products grouped by source
-
-### Example Response
-
-GET /products
-
-[
-  {
-    "id": 1,
-    "name": "Chanel Belt",
-    "brand": "Chanel",
-    "price": 2500,
-    "source": "1stdibs"
-  }
-]   
-
 ---
 
-##  System Architecture
-
-### 1. Ingestion Pipeline
-
-* Reads JSON data from multiple sources
-* Uses normalization layer to standardize data
-* Inserts into database
-* Detects price changes
-
-### 2. Price History
-
-* Stored in separate table (`price_history`)
-* Linked via `product_id`
-* Efficient for large-scale queries
-
-### 3. Event-Driven Notifications
-
-* Price changes generate events
-* Events stored in `events` table
-* Background worker processes events
-* Ensures non-blocking ingestion
-
-### 4. API Layer
-
-* Built using FastAPI
-* Supports filtering, analytics, and history
-* Secured using API key authentication
-
-### 5. Frontend
-
-* Simple HTML + JavaScript UI
-* Displays dashboard, products, and history
-
----
-
-##  Design Decisions
-
-### 🔹 Price History Scaling
-
-Price history is stored in a dedicated table with indexing on `product_id` and timestamps. This allows efficient querying even when the table grows to millions of rows.
-
----
-
-### 🔹 Scaling Considerations   ← ✅ ADD HERE
-
-- Price history table can grow to millions of rows
-- Indexed on `product_id` and `timestamp`
-- Queries use filtering to avoid full table scans
-- Can be improved using:
-  - Table partitioning
-  - Archival of old data
-  - Read replicas for heavy analytics
-
----
-
-
-### 🔹 Notification System
-
-An event-driven architecture is used:
-
-* Price changes create events
-* Worker processes events asynchronously
-* Ensures reliability and avoids blocking ingestion
-
----
-
-### 🔹 Handling Multiple Sources
-
-A normalization layer (`normalizer.py`) standardizes input data.
-
-To add a new source:
-
-* Implement a new normalization function
-* Reuse ingestion pipeline
-
----
-
-##  Testing
-
-Run tests using:
+### 10. Run tests
 
 ```bash
 python -m pytest
 ```
 
-Tests cover:
+---
+
+#  Authentication
+
+All API endpoints require:
+
+```
+api-key: YOUR_API_KEY
+```
+
+---
+
+#  API Documentation
+
+---
+
+## 🔹 GET /products
+
+Retrieve products with optional filters.
+
+### Query Parameters:
+
+* `source`
+* `category`
+* `min_price`
+* `max_price`
+
+### Example:
+
+```
+GET /products?min_price=1000&source=grailed
+```
+
+### Response:
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Product Name",
+    "brand": "Brand",
+    "price": 1200.0,
+    "source": "grailed"
+  }
+]
+```
+
+---
+
+## 🔹 GET /products/{id}
+
+Get product details along with price history.
+
+### Example:
+
+```
+GET /products/1
+```
+
+### Response:
+
+```json
+{
+  "id": 1,
+  "name": "Product Name",
+  "brand": "Brand",
+  "price": 1200.0,
+  "source": "grailed",
+  "history": [
+    {
+      "price": 1000.0,
+      "timestamp": "2026-03-01T10:00:00"
+    }
+  ]
+}
+```
+
+---
+
+## 🔹 GET /analytics
+
+Returns global and filtered aggregate statistics.
+
+### Query Parameters:
+
+* `source` (optional)
+* `category` (optional)
+
+### Response:
+
+```json
+{
+  "total_products": 90,
+  "average_price": 2184.0,
+
+  "products_by_source": [
+    {"source": "grailed", "count": 30}
+  ],
+
+  "source_summary": [
+    {
+      "source": "grailed",
+      "count": 30,
+      "avg_price": 2100.0
+    }
+  ],
+
+  "average_price_by_category": [
+    {
+      "category": "Earrings",
+      "avg_price": 2500.0,
+      "count": 10
+    }
+  ],
+
+  "filtered_total": 5,
+  "filtered_avg": 2400.0
+}
+```
+
+---
+
+## 🔹 POST /refresh
+
+Triggers data ingestion asynchronously.
+
+### Response:
+
+```json
+{
+  "message": "Data refresh started"
+}
+```
+
+ Note: This endpoint runs ingestion in the background and does not wait for completion. It reads JSON files from `data/`.
+
+---
+
+#  Error Handling
+
+The API validates inputs and returns appropriate errors:
+
+| Status Code | Meaning                                              |
+| ----------- | ---------------------------------------------------- |
+| 400         | Invalid input (e.g., negative price, empty category) |
+| 401         | Missing or invalid API key                           |
+| 404         | Product not found                                    |
+
+### Example:
+
+```json
+{
+  "detail": "min_price must be >= 0"
+}
+```
+
+---
+
+#  Design Decisions
+
+---
+
+## 🔹 Price History Scaling
+
+Price history is stored in a separate table (`price_history`) linked by `product_id`.
+
+### Why this scales:
+
+* Append-only writes
+* Indexed by `product_id`
+* Efficient for millions of rows
+
+### Future improvements:
+
+* Table partitioning by time
+* Archiving old records
+* Using time-series databases
+
+---
+
+## 🔹 Notification System
+
+An **event-driven architecture** is used:
+
+### Flow:
+
+1. Price change detected during ingestion
+2. Event stored in `events` table (`pending`)
+3. Worker processes events asynchronously
+4. Status updated (`sent` / `failed`)
+
+### Why this approach:
+
+* Non-blocking ingestion
+* Reliable (events stored in DB)
+* Supports retry of failed events
+
+Notifications are simulated via logs but can be extended to webhooks or messaging systems. Failed events are retried in subsequent worker runs.
+
+---
+
+## 🔹 Handling Multiple Sources
+
+A normalization layer standardizes different input formats.
+
+### Benefits:
+
+* Easy to add new sources
+* Decoupled ingestion logic
+
+### Scaling to 100+ sources:
+
+* Add new parser per source
+* Plug into ingestion pipeline
+* No change required in API/database
+
+---
+
+#  System Architecture
+
+### Components:
+
+1. **Ingestion Layer**
+
+   * Reads data
+   * Detects price changes
+   * Stores products & history
+
+2. **Database**
+
+   * Products
+   * Price history
+   * Events
+   * API usage logs
+
+3. **Worker**
+
+   * Processes events asynchronously
+   * Handles failures & retries
+
+4. **API (FastAPI)**
+
+   * Filtering
+   * Analytics
+   * Authentication
+   * Usage tracking
+
+5. **Frontend**
+
+   * Dashboard
+   * Product listing
+   * Product detail with history
+
+---
+
+#  Testing
+
+Tests are located in tests/test_api.py
+
+Run:
+
+```bash
+python -m pytest
+```
+
+Covers:
 
 * Authentication
-* API endpoints
+* API responses
 * Edge cases
-* Filtering
-* Invalid inputs
+* Error handling
+* Filters
 
 ---
 
-##  Known Limitations
+#  Known Limitations
 
-* No real external notification integration (webhook/email simulated)
-* Basic frontend UI (not styled)
+* No real notification integration (email/webhook simulated)
 * No pagination for large datasets
 * No caching layer
+* Worker runs manually (not scheduled)
+* Basic frontend (no styling)
+* No rate limiting
 
 ---
 
-##  Future Improvements
+#  Future Improvements
 
 * Add Redis caching
+* Implement pagination
+* Add real-time updates (WebSockets)
 * Integrate message queue (Kafka/RabbitMQ)
-* Improve frontend UI (React/Vue)
-* Add pagination and sorting
-* Add real-time updates via WebSockets
+* Improve frontend (React + charts)
+* Add retry backoff for events
+* Deploy with Docker & CI/CD
 
 ---
 
-##  Project Structure
+#  Project Structure
 
 ```
 price-monitor/
@@ -250,8 +424,8 @@ price-monitor/
 │   ├── auth.py
 │   └── dependencies.py
 │
-├── data/
 ├── tests/
+├── data/
 ├── main.py
 ├── index.html
 ├── create_user.py
@@ -261,14 +435,14 @@ price-monitor/
 
 ---
 
-##  Conclusion
+#  Conclusion
 
-This system demonstrates:
+This project demonstrates:
 
-* Scalable backend design
+* End-to-end backend system design
 * Event-driven architecture
+* Scalable data handling
 * Clean API design
-* End-to-end data flow
 * Real-world engineering practices
 
 ---
